@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+from supabase import create_client, Client
 
 print("🚀 Mock Data Generate Ho Raha Hai...")
 np.random.seed(42)
@@ -50,18 +51,43 @@ df = pd.DataFrame({
     'sales': np.round(sales, 2), 'quantity': quantities, 'discount': discounts, 'profit': np.round(profits, 2)
 })
 
-# Missing value introduce karna challenge ke liye
+# Missing value introduce karna profile optimization tracking ke liye
 df.loc[df.sample(frac=0.01).index, 'discount'] = np.nan
 
 print("🧹 Data Preprocessing Aur Cleaning Shuru...")
 df.dropna(subset=['order_id', 'sales'], inplace=True)
-df['discount'].fillna(0.0, inplace=True)
-df['order_date'] = pd.to_datetime(df['order_date'])
 
-# Feature Engineering
-df['profit_margin'] = (df['profit'] / df['sales']) * 100
-df['calculated_cost_basis'] = df['sales'] - df['profit']
+# Fixed Copy-on-Write assignment warnings
+df['discount'] = df['discount'].fillna(0.0)
+df['order_date'] = pd.to_datetime(df['order_date']).dt.strftime('%Y-%m-%d')
 
-# Clean CSV export karna
+# Feature Engineering Vector Analytics
+df['profit_margin'] = np.round((df['profit'] / df['sales']) * 100, 2)
+df['calculated_cost_basis'] = np.round(df['sales'] - df['profit'], 2)
+
+# --- CRITICAL INTEGRATION FIX: Replace non-JSON compliant NaN values ---
+df['profit_margin'] = df['profit_margin'].replace([np.inf, -np.inf], np.nan).fillna(0.0)
+df['calculated_cost_basis'] = df['calculated_cost_basis'].fillna(0.0)
+# ------------------------------------------------------------------------
+
+# Local Checkpoint Backup
 df.to_csv('cleaned_sales_data.csv', index=False)
-print("✨ Cleaned data save ho gaya: cleaned_sales_data.csv")
+print("✨ Cleaned data local save ho gaya: cleaned_sales_data.csv")
+
+# 🔗 LIVE INSTANTIATED SUPABASE API CONFIGURATION
+SUPABASE_URL = "https://rlcxkqirdjgwpsnxobrx.supabase.co"
+SUPABASE_KEY = "sb_publishable_7dA8YRoBh9HxjvjrLvSPHA_uOnSJkOy"
+
+try:
+    print("🔌 Supabase Secure REST Tunnel Se Connection Set Ho Raha Hai...")
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # Batch formatting structure serialization
+    records = df.to_dict(orient='records')
+    
+    print("📤 Transmitting Data Records to 'corporate_sales_records' Table...")
+    # Cloud matrix server synchronization execution line
+    supabase.table('corporate_sales_records').upsert(records).execute()
+    print("⚡ Success! Saara Analytical Data API Key Ke Through Supabase Me Live Chala Gaya.")
+except Exception as e:
+    print(f"❌ Handshake Validation Failure: {e}")
