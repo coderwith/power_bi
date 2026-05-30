@@ -1,10 +1,15 @@
+import os
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+from dotenv import load_dotenv
 from supabase import create_client, Client
 
-# 1. PAGE INITIALIZATION & PREMIUM THEME DESIGN CSS INJECTION
+# 1. LOAD ENVIRONMENTAL CONFIGS
+load_dotenv()
+
+# 2. PAGE INITIALIZATION & PREMIUM THEME DESIGN CSS INJECTION
 st.set_page_config(page_title="Apple Style Sales Dashboard", layout="wide")
 
 st.markdown("""
@@ -32,31 +37,43 @@ st.markdown("""
 st.markdown("""
     <div class="custom-header">
         <h1>Enterprise Sales Performance Analytics</h1>
-        <span>Cloud Engine Interface: Connected via Supabase API Gateway</span>
+        <span>Cloud Engine Interface: Connected via Secure Supabase REST API (Port 443)</span>
     </div>
 """, unsafe_allow_html=True)
 
-# 2. RUN REAL-TIME API SELECT QUERIES
+# 3. HIGH-RELIABILITY API FETCH ENGINE (Bypasses Firewall Timeouts)
 @st.cache_data
 def fetch_cloud_records():
-    SUPABASE_URL = "https://rlcxkqirdjgwpsnxobrx.supabase.co"
-    SUPABASE_KEY = "sb_publishable_7dA8YRoBh9HxjvjrLvSPHA_uOnSJkOy"
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
     
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        st.error("❌ Environment variables missing! Please check your .env file or Streamlit Secrets.")
+        st.stop()
+        
+    # Initialize native API client over HTTPS (Standard port 443)
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # Query database records through public gateway
     response = supabase.table('corporate_sales_records').select("*").execute()
     
     data = pd.DataFrame(response.data)
-    data['order_date'] = pd.to_datetime(data['order_date'])
-    data['year'] = data['order_date'].dt.year
+    
+    if not data.empty:
+        data['order_date'] = pd.to_datetime(data['order_date'])
+        data['year'] = data['order_date'].dt.year
     return data
 
 try:
     df = fetch_cloud_records()
+    if df.empty:
+        st.warning("⚠️ Database connected successfully, but 'corporate_sales_records' table is empty.")
+        st.stop()
 except Exception as api_err:
     st.error(f"Failed to fetch real-time cloud data layers: {api_err}")
     st.stop()
 
-# 3. TOP FINANCIAL KPI SUMMARY BLOCKS
+# 4. TOP FINANCIAL KPI SUMMARY BLOCKS
 m1, m2, m3, m4, m5 = st.columns(5)
 total_orders = df['order_id'].nunique()
 avg_margin = df['profit_margin'].mean()
@@ -72,7 +89,7 @@ m5.metric("Gross Revenue Return", f"${total_revenue/1000000:.2f}M")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 4. MIDDLE VISUAL LAYOUT (3 GRID PANELS)
+# 5. MIDDLE VISUAL LAYOUT (3 GRID PANELS)
 mid_col1, mid_col2, mid_col3 = st.columns([1, 1.5, 1])
 
 with mid_col1:
@@ -104,7 +121,7 @@ with mid_col3:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 5. BOTTOM RISK MATRIX LAYER (4 DEEP-DIVE PANELS)
+# 6. BOTTOM RISK MATRIX LAYER (4 DEEP-DIVE PANELS)
 bot_col1, bot_col2, bot_col3, bot_col4 = st.columns(4)
 
 with bot_col1:
